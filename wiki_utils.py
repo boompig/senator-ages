@@ -299,6 +299,8 @@ if __name__ == "__main__":
                         help="Extract and save data for US Reps")
     parser.add_argument("--ca-reps", action="store_true",
                         help="Extract and save data for Canadian MPs")
+    parser.add_argument("--germany", action="store_true",
+                        help="Extract and save data for Bundestag")
     args = parser.parse_args()
 
     if args.us_senators:
@@ -353,3 +355,12 @@ if __name__ == "__main__":
             pass
         save_parsed_data(rows, "data/ca_reps/ca_reps_with_links.json")
         df.to_parquet(path="data/ca_reps/ca_reps_with_links.parquet")
+    if args.germany:
+        url = 'https://en.wikipedia.org/wiki/List_of_members_of_the_19th_Bundestag'
+        table = extract_wikitable(url)
+        df = wikitable_to_dataframe(table)
+        try:
+            os.makedirs('data/germany')
+        except FileExistsError:
+            pass
+        df.to_parquet(path="data/germany/bundestag_19.parquet")
