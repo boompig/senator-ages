@@ -185,7 +185,7 @@ def read_age_from_wikipedia_page(member_link: str) -> Optional[int]:
 def extract_birth_date_from_infobox(member_link: str) -> Optional[str]:
     title = __title_from_relative_link(member_link)
     try:
-        page = wptools.page(title)
+        page = wptools.page(title, silent=True)
         d = page.get_parse()
     except LookupError as e:
         print(f'failed to get page for title {title}')
@@ -194,6 +194,7 @@ def extract_birth_date_from_infobox(member_link: str) -> Optional[str]:
     try:
         return d.data['infobox']['birth_date']
     except KeyError:
+        logging.error("No birth_date key specified in infobox for %s", title)
         pprint(d.data['infobox'])
         return None
 
@@ -328,7 +329,7 @@ if __name__ == "__main__":
         df.to_parquet(path="data/ca_senators/senators.parquet")
     if args.us_reps:
         url = 'https://en.wikipedia.org/wiki/List_of_current_members_of_the_United_States_House_of_Representatives'
-        table = extract_wikitable(url)
+        table = extract_wikitable(url, id="votingmembers")
         cols = extract_wikitable_schema(table)
         rows = extract_wikitable_content(table, cols)
         df = pd.DataFrame(rows)
@@ -351,4 +352,4 @@ if __name__ == "__main__":
         except FileExistsError:
             pass
         save_parsed_data(rows, "data/ca_reps/ca_reps_with_links.json")
-        df.to_parquet(path="data/us_reps/ca_reps_with_links.parquet")
+        df.to_parquet(path="data/ca_reps/ca_reps_with_links.parquet")
