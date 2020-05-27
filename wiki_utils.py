@@ -75,9 +75,12 @@ def extract_wikitable_content(table: BeautifulSoup, cols: List[str]) -> List[dic
     return rows
 
 
-def wikitable_to_dataframe(table: BeautifulSoup) -> pd.DataFrame:
+def wikitable_to_dataframe(table: BeautifulSoup, with_links: bool = False) -> pd.DataFrame:
     cols = extract_wikitable_schema(table)
-    rows = extract_wikitable_content(table, cols)
+    if with_links:
+        rows = extract_wikitable_content_with_links(table, cols)
+    else:
+        rows = extract_wikitable_content(table, cols)
     df = pd.DataFrame(rows)
     return df
 
@@ -121,9 +124,14 @@ def extract_wikitable_content_with_links(table: BeautifulSoup, cols: List[str]) 
             if 'rowspan' in col.attrs and int(col.attrs['rowspan']) == 2:
                 next_row[key] = d[key]
 
-            anchor = col.find('a')
-            if anchor:
+            anchors = col.find_all('a')
+
+            if len(anchors) == 1:
+                anchor = col.find('a')
                 d[key + '_link'] = anchor.attrs['href']
+            elif len(anchors) > 1:
+                for i, anchor in enumerate(anchors):
+                    d[key + f'_link_{i + 1}'] = anchor.attrs['href']
 
         rows.append(d)
     return rows
@@ -301,6 +309,8 @@ if __name__ == "__main__":
                         help="Extract and save data for Canadian MPs")
     parser.add_argument("--germany", action="store_true",
                         help="Extract and save data for Bundestag")
+    parser.add_argument("--uk", action="store_true",
+                        help="Extract and save data for UK Parliament")
     args = parser.parse_args()
 
     if args.us_senators:
@@ -364,3 +374,12 @@ if __name__ == "__main__":
         except FileExistsError:
             pass
         df.to_parquet(path="data/germany/bundestag_19.parquet")
+    if args.uk:
+        url = 'https://en.wikipedia.org/wiki/List_of_MPs_elected_in_the_2019_United_Kingdom_general_election#List_of_MPs_elected'
+        table = extract_wikitable(url, id="elected-mps")
+        df = wikitable_to_dataframe(table, with_links=True)
+        try:
+            os.makedirs('data/uk')
+        except FileExistsError:
+            pass
+        df.to_parquet(path="data/uk/parliament_2019.parquet")
